@@ -1,0 +1,120 @@
+#!/bin/bash
+# Libvirt hook - chuan bi truoc khi VM win10-gpu start
+# 2026-08-15: bo setup-win-data (device-mapper) - gio dung file raw truc tiep /mnt/data/vm_win10/
+GUEST="$1"
+OP="$2"
+
+if [ "$GUEST" = "win10-gpu" ] && [ "$OP" = "prepare" ]; then
+  export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+  logger -t libvirt-hook "win10-gpu prepare: check disk qcow2..."
+  for f in /mnt/data/vm_win10/win10.qcow2 /mnt/data/vm_win10/data.qcow2 /mnt/data/vm_win10/game.qcow2; do
+    if [ ! -f "$f" ]; then
+      logger -t libvirt-hook "win10-gpu prepare: THIEU $f - abort VM"
+      exit 1
+    fi
+  done
+  if ! lspci -nnk -s 43:00.0 2>/dev/null | grep -q "Kernel driver in use: vfio-pci"; then
+    logger -t libvirt-hook "win10-gpu: GPU3 (43:00.0) KHONG tren vfio-pci - VM khong co GPU!"
+  fi
+fi
+
+if [ "$GUEST" = "win10-gpu" ] && [ "$OP" = "release" ]; then
+  export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+  logger -t libvirt-hook "win10-gpu release: GPU3 ve nvidia (nen)"
+  (
+
+echo "==> [0/7] Check VM win10-gpu khong duoc chay (GPU3 dang thuoc VM)"
+if virsh list --name --state-running 2>/dev/null | grep -qx "win10-gpu"; then
+  echo "   ❌ VM 'win10-gpu' DANG CHAY - GPU3 dang bi VM giu!"
+  echo "   -> Shutdown VM truoc: sudo virsh shutdown win10-gpu (hoac sudo virsh destroy win10-gpu)"
+  exit 1
+else
+  echo "   OK: VM khong chay"
+fi
+
+echo "==> [1/7] Tat info.service (tranh treo khi bind driver)"
+systemctl stop info.service 2>/dev/null || true
+
+echo "==> [1b] Tat Persistence Mode (tranh xung dot khi bind GPU3 vao nvidia)"
+nvidia-smi -pm 0 2>/dev/null || true
+
+echo "==> [2/7] Unbind GPU3 (4 function) khoi vfio-pci"
+for f in 0 1 2 3; do
+  dev="0000:43:00.$f"
+  if [ -L "/sys/bus/pci/devices/$dev/driver" ]; then
+    drv=$(basename $(readlink "/sys/bus/pci/devices/$dev/driver"))
+    if [ "$drv" = "vfio-pci" ]; then
+      echo "$dev" > /sys/bus/pci/drivers/vfio-pci/unbind 2>/dev/null && echo "   $dev: unbind vfio-pci OK" || echo "   $dev: unbind vfio-pci FAIL"
+    else
+      echo "   $dev: dang tren $drv (khong tren vfio - bo qua)"
+    fi
+  else
+    echo "   $dev: chua co driver"
+  fi
+done
+sleep 2  # cho device detach xong khoi vfio truoc khi override
+
+echo "==> [3/7] Ghi driver_override dung cho tung function"
+echo nvidia > /sys/bus/pci/devices/0000:43:00.0/driver_override 2>/dev/null && echo "   43:00.0 override -> nvidia" || echo "   (ghi override .0 FAIL)"
+echo snd_hda_intel > /sys/bus/pci/devices/0000:43:00.1/driver_override 2>/dev/null && echo "   43:00.1 override -> snd_hda_intel" || echo "   (ghi override .1 FAIL)"
+echo xhci_hcd > /sys/bus/pci/devices/0000:43:00.2/driver_override 2>/dev/null && echo "   43:00.2 override -> xhci_hcd" || echo "   (ghi override .2 FAIL)"
+echo nvidia-gpu > /sys/bus/pci/devices/0000:43:00.3/driver_override 2>/dev/null && echo "   43:00.3 override -> nvidia-gpu" || echo "   (ghi override .3 FAIL)"
+
+echo "==> [4/7] Bind lai driver tu nhien"
+modprobe i2c_nvidia_gpu 2>/dev/null || true
+for f in 0 1 2 3; do
+  dev="0000:43:00.$f"
+  case $f in
+    0) drv="nvidia" ;;
+    1) drv="snd_hda_intel" ;;
+    2) drv="xhci_hcd" ;;
+    3) drv="nvidia-gpu" ;;
+  esac
+  if [ ! -L "/sys/bus/pci/devices/$dev/driver" ]; then
+    timeout 8 bash -c "echo $dev > /sys/bus/pci/drivers/$drv/bind" 2>/dev/null && echo "   $dev: bind $drv OK" || echo "   $dev: bind $drv FAIL (check modprobe $drv)"
+    [ "$f" = "0" ] && sleep 2  # nvidia dang probe/reset GPU3 - cho on dinh truoc khi bind function khac
+  else
+    echo "   $dev: da bind $(basename $(readlink "/sys/bus/pci/devices/$dev/driver"))"
+  fi
+done
+
+echo "==> [5/7] Cho nvidia driver init xong GPU3 (khong dung persistenced/PM)"
+sleep 2  # cho nvidia driver init xong GPU3 truoc khi hoi nvidia-smi
+
+echo "==> [6/7] Xoa driver_override (giong trang thai vua boot)"
+# QUAN TRONG: phai echo co newline (echo "") - echo -n "" = 0 byte la no-op khong xoa duoc
+for f in 0 1 2 3; do
+  echo "" > /sys/bus/pci/devices/0000:43:00.$f/driver_override 2>/dev/null || true
+done
+
+echo "==> [7/7] Go vfio module (giong trang thai vua boot) + Bat lai info.service"
+modprobe -r vfio_pci 2>/dev/null || true
+modprobe -r vfio_pci_core 2>/dev/null || true
+modprobe -r vfio_iommu_type1 2>/dev/null || true
+modprobe -r vfio 2>/dev/null || true
+systemctl start info.service 2>/dev/null || true
+sleep 1  # cho moi thu on dinh truoc khi verify
+nvidia-smi -L
+
+echo "==> Verify: so GPU nvidia phai la 4"
+GPU_COUNT=$(nvidia-smi -L 2>/dev/null | grep -c "GPU")
+if [ "$GPU_COUNT" -eq 4 ]; then
+  echo "   ✅ OK: $GPU_COUNT GPU dang chay nvidia"
+else
+  echo "   ❌ FAIL: chi thay $GPU_COUNT/4 GPU - GPU3 chua ve nvidia"
+fi
+echo "---"
+for f in 0 1 2 3; do
+  echo -n "   43:00.$f -> override="
+  cat /sys/bus/pci/devices/0000:43:00.$f/driver_override 2>/dev/null || echo -n "(none)"
+  echo -n " | driver="
+  readlink /sys/bus/pci/devices/0000:43:00.$f/driver 2>/dev/null | xargs basename 2>/dev/null || echo "NO DRIVER"
+  echo ""
+done
+echo "==> Bat Persistence Mode (3 GPU + GPU3 moi ve nvidia)"
+nvidia-smi -pm 1 2>/dev/null || true
+echo "Ghi chu: muon ollama dung 4 GPU -> sudo systemctl restart ollama"
+
+  ) > /tmp/gpu3_nvidia_hook.log 2>&1 &
+fi
+exit 0

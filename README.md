@@ -117,6 +117,14 @@ Chạy **KVM/libvirt + OVMF**, VM Windows 10 có GPU vật lý riêng (RTX 2080 
 
 → **+18.7%** chỉ nhờ tối ưu host (raw disk + hugepages). Passthrough **không bottleneck**: card mod 22GB chạy đúng chuẩn stock.
 
+### Test game thật (Black Myth: Wukong)
+
+| Setting | Kết quả |
+|---|---|
+| **Preset Cinema** @ 3440×1440 | **~86 FPS** |
+
+→ Chạy ngon ở mức đồ họa **Cinema** (cao nhất của game). Muốn cao hơn nữa thì bật **FSR + Frame Gen**.
+
 ### Chuyển đổi AI ↔ VM không reboot
 
 ```

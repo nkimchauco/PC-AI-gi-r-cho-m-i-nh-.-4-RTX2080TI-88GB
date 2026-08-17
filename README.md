@@ -23,7 +23,7 @@ Một máy chủ AI tự build từ linh kiện "đồ cũ", chạy model LLM l�
 ### Chi tiết GPU
 
 - **Card:** Gigabyte RTX 2080 Ti blower, VRAM mod 11GB → **22GB** bằng cách **thay 11 chip nhớ 1GB bằng 11 chip 2GB** (thay chip trên board, không phải hàn thêm chip mặt sau). Test bằng `cuda_memtest` full pattern (Test0→Test10) đều **PASS** — ổn định.
-- **Công suất thực tế:** max đo được **< 650W** (Ollama chạy luân phiên, không full 4 GPU cùng lúc) → **không cần power limit**. PSU 1200W hiện tại là thừa, thật ra **800W đã quá đủ** (lúc đầu mua to vì bị "tư vấn" hù 😄).
+- **Công suất thực tế:** max đo được **< 650W** (Ollama chạy luân phiên, không full 4 GPU cùng lúc) → **không cần power limit**. PSU 1200W hiện tại là thừa, thật ra **800W đã quá đủ** (lúc đầu mua to vì bị " con AI tư vấn" hù 😄).
 - **PCIe layout:** khe 1 & 3 chạy **x16**, khe 2 & 4 chỉ **x8** (giới hạn cứng của mainboard X399 CREATION).
 
 ### Bố trí PCIe thực tế

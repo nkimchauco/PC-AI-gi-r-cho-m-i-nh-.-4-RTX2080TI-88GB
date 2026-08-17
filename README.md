@@ -4,7 +4,7 @@ Một máy chủ AI tự build từ linh kiện "đồ cũ", chạy model LLM l�
 
 > **Tóm tắt:** 88GB VRAM (4× RTX 2080 Ti mod 22GB) · Threadripper 2950X · 128GB RAM · chạy Qwen 122B-A10B MoE @ ~44–61 tok/s · VM Windows 10 với GPU passthrough nóng (hot-switch, không reboot).
 >
-> ⚠️ Lưu ý thẳng thắn: 88GB VRAM cũ (4× 2080 Ti mod) **chỉ tương đương ~1 chiếc RTX 5070 Ti mới** về hiệu năng tổng — nhưng chi phí chỉ bằng một phần nhỏ, và đây là cách học/làm AI local với ngân sách hạn hẹp.
+> 💡 **Nói thật về chi phí:** 4× RTX 2080 Ti mod 22GB (88GB VRAM) là đồ cũ, giá ngang **1 chiếc RTX 5070 Ti mới**. Nhưng cùng số tiền đó, một card mới 16GB chỉ đủ chạy model ~14B — còn bộ này chạy được **model 122B**, vừa AI vừa game, VM và LLM dùng chung máy: **làm được khối việc hơn hẳn**.
 
 ---
 

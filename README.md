@@ -1,4 +1,4 @@
-# 🤖 AI giá rẻ cho mọi nhà — X399 AI Server, 88GB VRAM, 4× RTX 2080 Ti mod 22GB
+# 🖥️ PC AI giá rẻ cho mọi nhà — 4× RTX 2080 Ti 88GB
 
 Một máy chủ AI tự build từ linh kiện "đồ cũ", chạy model LLM lớn trên **4 GPU song song** và **Windows 10 VM với GPU passthrough** trên cùng một cỗ máy — không cần reboot để chuyển đổi giữa AI và VM.
 

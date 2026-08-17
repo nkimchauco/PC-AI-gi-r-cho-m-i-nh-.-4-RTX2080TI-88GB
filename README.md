@@ -23,7 +23,7 @@ Một máy chủ AI tự build từ linh kiện "đồ cũ", chạy model LLM l�
 ### Chi tiết GPU
 
 - **Card:** Gigabyte RTX 2080 Ti blower, VRAM mod 11GB → **22GB** bằng cách **thay 11 chip nhớ 1GB bằng 11 chip 2GB** (thay chip trên board, không phải hàn thêm chip mặt sau). Test bằng `cuda_memtest` full pattern (Test0→Test10) đều **PASS** — ổn định.
-- **Power limit:** 200W/card (từ 250W) — tiết kiệm ~100W tổng, nhiệt mát hơn, performance gần như không đổi.
+- **Công suất thực tế:** max đo được **< 650W** (Ollama chạy luân phiên, không full 4 GPU cùng lúc) → **không cần power limit**. PSU 1200W hiện tại là thừa, thật ra **800W đã quá đủ** (lúc đầu mua to vì bị "tư vấn" hù 😄).
 - **PCIe layout:** khe 1 & 3 chạy **x16**, khe 2 & 4 chỉ **x8** (giới hạn cứng của mainboard X399 CREATION).
 
 ### Bố trí PCIe thực tế
@@ -154,7 +154,7 @@ Toàn bộ script dùng thật trên máy, để trong [`scripts/`](scripts/):
 
 1. **Tắt DRM module của NVIDIA** nếu máy chạy headless (không cần màn hình console): block `nvidia_drm` qua `/etc/modprobe.d/` + `update-initramfs -u`. Không làm điều này, khi unbind/bind GPU để chuyển qua lại giữa AI và VM rất dễ **treo máy** (rmmod nvidia_drm kẹt D-state).
 2. **Remote desktop vào Windows VM**: nếu không có HDMI dummy plug (không có màn hình ảo để GPU render), dùng **Parsec** thay vì Sunshine + Moonlight — Parsec hoạt động tốt hơn hẳn trong môi trường headless/GPU passthrough.
-3. **Power limit 200W** là mức ngọt cho 2080 Ti chạy 24/7 — mát hơn, ổn định hơn, mất ~0% hiệu năng.
+3. **PSU đừng mua to quá**: 4× 2080 Ti + CPU full load đo được **dưới 650W** — nguồn 800W là thừa sức, khỏi cần 1200W. **Power limit cũng không cần** vì Ollama chạy luân phiên, không bao giờ full 4 GPU cùng lúc.
 4. **TRIM/discard** cho qcow2: bật virtio-blk discard để file ảnh Windows tự co lại, không phình vô hạn.
 5. Với multi-GPU llama.cpp: `SCHED_SPREAD=1` giúp dàn layer đều, tránh 1 GPU nghẽn.
 
